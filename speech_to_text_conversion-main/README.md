@@ -1,48 +1,90 @@
-TITLE : text to Speech conversion
-code description : 
-openai-whisper-For transcribing speech to text using OpenAI’s Whisper model.
-noisereduce-For reducing background noise in audio recordings.
-pydub-To convert audio files from various formats (e.g., MP3 → WAV).
-ffmpeg-python-Backend required by pydub for handling audio conversions.
-scipy.io.wavfile-To read and write WAV files.
-numpy-For numerical audio data processing.
-google.colab.files-To upload files directly in Google Colab.
+# Speech to Text Conversion — What I actually did
 
-MAIN USECASE:
-Journalists or podcasters transcribing interviews recorded in noisy environments
-Students recording lectures in classrooms
-Call centers analyzing voice logs
-Researchers working with real-world field audio
-Accessibility solutions for the hearing impaired
+This repository contains a single Jupyter notebook (`speech_to_text.ipynb`) that implements an experiment to transcribe audio using a small preprocessing pipeline and OpenAI Whisper.
 
- FEATURES:
-Accepts any audio format: MP3, M4A, WAV, etc.
-Converts to standard WAV format with proper sampling
-Applies noise reduction using noisereduce
-Transcribes using OpenAI Whisper (choose from tiny, base, medium, large)
-Entirely cloud-based (Google Colab), so no local installation required
+Below I describe exactly what I did, which libraries the notebook uses, how to run it (Colab and locally), and recommended next steps.
 
-WORKING:
+## Exactly what I did in the notebook
 
-This project is built to convert spoken words into text, even when the audio isn't perfectly clear. Think of it like a smart assistant that can listen to a noisy audio file,
-clean it up, and then write down exactly what was said — all in just a few steps.
-*You upload an audio file — this can be in formats like MP3, M4A, or WAV. The system is flexible with what it accepts.
-*The audio is first converted into a standard format (WAV, mono, 16kHz) using a tool called pydub. This step makes sure the audio is in a clean and readable form for the rest of the system to work with.
-*Once the audio is ready, it goes through a noise reduction process using the noisereduce library. This step is like cleaning up a blurry image — but for sound. It removes background noise such as fans, cars, or crowd murmurs while keeping your voice intact.
-*After the audio is cleaned, it’s passed to OpenAI’s Whisper model, which is one of the most accurate speech recognition systems available. Whisper “listens” to the audio and converts what it hears into plain text
-*Finally, the transcribed text is printed out — ready to be read, saved, or used in your application.
+1. Installed runtime packages inside the notebook using pip (the notebook includes an install cell).
+2. Uploaded an audio file using `google.colab.files.upload()` (the notebook was developed with Colab in mind).
+3. Converted the uploaded audio to a WAV file using `pydub.AudioSegment` and standardized it to 16 kHz, mono, 16-bit sample width.
+4. Read the WAV file with `scipy.io.wavfile` and converted the data to float32 / normalized form.
+5. Applied noise reduction using `noisereduce.reduce_noise` and saved the cleaned audio as `cleaned.wav`.
+6. Loaded the Whisper model (`medium`) via the `whisper` package and transcribed the cleaned audio using `model.transcribe(cleaned_path)`.
+7. Printed (and saved) the resulting transcript text.
 
-FUTURE SCOPE:
+## Exact libraries and tools the notebook uses
 
-Real-time Mic Input-Integrate with sounddevice on local machines to handle live speech
-Speaker Diarization-Add support to label "Speaker 1", "Speaker 2", etc., using tools like pyannote.audio
-UI Integration-Build a web app using Streamlit or Gradio for user-friendly interaction
-Multilingual Support-Whisper already supports multiple languages; auto-detect and transcribe accordingly
-Timestamped Transcript-Extend using whisperx to get word-level timestamps
+- openai-whisper (`whisper`) — loads Whisper models and performs transcription. The notebook uses the `medium` model.
+- noisereduce — performs noise reduction on waveform arrays.
+- pydub — reading and converting many audio formats, exporting WAV. Requires `ffmpeg` installed on the system.
+- ffmpeg / ffmpeg-python — helper bindings and ffmpeg dependency for pydub.
+- scipy (scipy.io.wavfile) — read/write WAV files.
+- numpy — numeric array processing.
+- google.colab.files — for file upload convenience in Google Colab (not available outside Colab).
 
+The notebook includes this pip install line near the top:
 
-CONCLUSION:
+```
+!pip install -q openai-whisper noisereduce pydub ffmpeg-python
+```
 
-This project demonstrates a practical, cloud-based way to transcribe noisy audio into text using the power of OpenAI Whisper and a few smart preprocessing steps. 
-Whether you're capturing real-world speech for journalism, education, or accessibility, this tool makes high-quality transcription more accessible—even in imperfect environments.
-The modular nature of the system makes it easy to extend further, and because it's implemented in Google Colab, it's beginner-friendly and instantly usable by anyone with a browser.
+## How to run
+
+Option A — Quick start in Google Colab (recommended for first run):
+
+1. Upload the notebook to Colab (File -> Upload notebook) or open it directly from Google Drive.
+2. Run the cells top-to-bottom. The `google.colab.files.upload()` cell will prompt you to select your audio file.
+3. The notebook will install dependencies at runtime and write `converted.wav` and `cleaned.wav` into the Colab filesystem. The final cell runs Whisper and prints the transcript.
+
+Option B — Run locally (Windows, cmd.exe):
+
+1. Install ffmpeg for Windows and ensure `ffmpeg.exe` is on your PATH. pydub requires ffmpeg.
+2. Create and activate a virtual environment (Windows cmd):
+
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+3. Install the packages used in the notebook:
+
+```cmd
+pip install jupyter openai-whisper noisereduce pydub ffmpeg-python numpy scipy
+```
+
+4. Open the notebook locally:
+
+```cmd
+jupyter notebook speech_to_text.ipynb
+```
+
+5. Replace the Colab uploader cell with a local assignment, for example:
+
+```python
+input_filename = "data/example_audio.mp3"  # set to your local file
+```
+
+6. Run the notebook cells in order. The notebook will produce `converted.wav` and `cleaned.wav`, and then run Whisper to create the transcript.
+
+## Important caveats and notes
+
+- Whisper `medium` is large and may be slow on CPU-only machines. Use `small` or `base` if you want faster runs with lower resource needs.
+- The notebook normalizes audio to float32 before noise reduction; beware of scaling issues if you change sample widths or file types.
+- `google.colab.files.upload()` is a Colab convenience — replace it for local usage as shown above.
+- If you plan to run many transcriptions, consider extracting the core logic into a script that accepts file paths and a model name rather than using the notebook interactively.
+
+## Files in this repo
+
+- `speech_to_text.ipynb` — Jupyter notebook implementing the pipeline described above.
+- `README.md` — this file, describing exactly what I did and how to run it.
+
+## Recommended next steps (I can implement any of these)
+
+1. Add a `requirements.txt` that pins the package versions used in the notebook.
+2. Add a `data/` folder with one small example audio file and update the notebook to use it by default.
+3. Extract the notebook code into a small CLI script (`run_transcription.py`) so the pipeline can be run non-interactively and added to CI.
+4. Add a simple smoke test (run pipeline on the small example audio and assert transcript is non-empty).
+
+If you want, tell me which follow-up to implement and I will do it next (I can generate `requirements.txt` and modify the notebook to run locally, or extract a script and add a test).
